@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Hall Allocation System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-graduation-cap"></i> Exam Hall Allocation System</h1>
+            <div class="admin-info" id="admin-info" style="display: none;">
+                <span id="admin-name"></span>
+                <button class="btn btn-small" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <button class="nav-btn active" onclick="showSection('admin')">
+                <i class="fas fa-user-shield"></i> Admin Panel
+            </button>
+            <button class="nav-btn" onclick="showSection('student')">
+                <i class="fas fa-user"></i> Student Panel
+            </button>
+            <button class="nav-btn" onclick="showSection('reports')">
+                <i class="fas fa-chart-bar"></i> Reports
+            </button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Admin Panel Section -->
+        <section id="admin-section" class="content-section active">
+            <h2><i class="fas fa-cog"></i> Admin Panel</h2>
+            
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showAdminTab('halls')">Halls Setup</button>
+                <button class="tab-btn" onclick="showAdminTab('departments')">Departments Setup</button>
+                <button class="tab-btn" onclick="showAdminTab('sessions')">Exam Sessions</button>
+                <button class="tab-btn" onclick="showAdminTab('allocation')">Run Allocation</button>
+            </div>
+
+            <!-- Halls Setup Tab -->
+            <div id="halls-tab" class="tab-content active">
+                <div class="card">
+                    <h3>Add Exam Halls</h3>
+                    <form id="hall-form">
+                        <div class="form-group">
+                            <label for="hall-name">Hall Name:</label>
+                            <input type="text" id="hall-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="hall-capacity">Capacity:</label>
+                            <input type="number" id="hall-capacity" min="1" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Hall
+                        </button>
+                    </form>
+                    
+                    <div class="halls-list">
+                        <h4>Current Halls</h4>
+                        <div id="halls-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Departments Setup Tab -->
+            <div id="departments-tab" class="tab-content">
+                <div class="card">
+                    <h3>Add Departments</h3>
+                    <div id="dept-status" style="margin-bottom: 20px;"></div>
+                    <form id="department-form">
+                        <div class="form-group">
+                            <label for="dept-name">Department Name:</label>
+                            <input type="text" id="dept-name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Roll Numbers Entry Method:</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="roll-entry-method" value="manual" checked>
+                                    Manual Entry
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="roll-entry-method" value="excel">
+                                    Upload Excel/CSV File
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Manual Entry Section -->
+                        <div id="manual-roll-entry">
+                            <div class="form-group">
+                                <label for="manual-roll-input">Enter Roll Number:</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="manual-roll-input" placeholder="e.g., CS001" style="flex: 1;">
+                                    <button type="button" class="btn btn-secondary" onclick="addManualRollNumber()">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                                <small class="form-help">Enter each roll number and click Add. You can also paste multiple roll numbers (comma or space separated).</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Added Roll Numbers:</label>
+                                <div id="roll-numbers-list" style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; max-height: 300px; overflow-y: auto; background: #fafafa;">
+                                    <p style="color: #999; text-align: center; margin: 20px 0;">No roll numbers added yet</p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Total Students: <span id="total-students-count" style="font-weight: bold; color: #2980b9;">0</span></label>
+                            </div>
+                        </div>
+                        
+                        <!-- Excel Import Section -->
+                        <div id="excel-roll-entry" style="display: none;">
+                            <div class="form-group">
+                                <label for="excel-file">Select Excel/CSV File:</label>
+                                <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" onchange="previewExcelFile()">
+                                <small class="form-help">Upload an Excel or CSV file. Should contain roll numbers in one of these formats:
+                                <br>• First column of any sheet (row 1 can be header)
+                                <br>• Multiple roll numbers per line (comma, space, or tab separated)</small>
+                            </div>
+                            
+                            <div id="excel-preview" style="display: none; margin-top: 20px;">
+                                <h4>Preview - Roll Numbers Found: <span id="excel-roll-count">0</span></h4>
+                                <div id="excel-preview-content" style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; max-height: 300px; overflow-y: auto; background: #fafafa;">
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>
+                                        <input type="checkbox" id="excel-include-header" checked>
+                                        Skip first row as header
+                                    </label>
+                                </div>
+                                <button type="button" class="btn btn-secondary" onclick="reloadExcelPreview()" style="margin-top: 10px;">
+                                    <i class="fas fa-sync"></i> Reload Preview
+                                </button>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label>Total Students from File: <span id="excel-total-students-count" style="font-weight: bold; color: #2980b9;">0</span></label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Department
+                        </button>
+                    </form>
+                    
+                    <div class="departments-list">
+                        <h4>Current Departments</h4>
+                        <div id="departments-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Sessions Tab -->
+            <div id="sessions-tab" class="tab-content">
+                <div class="card">
+                    <h3>Add Exam Session</h3>
+                    <form id="session-form">
+                        <div class="form-group">
+                            <label for="session-name">Session Name:</label>
+                            <input type="text" id="session-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="exam-date">Exam Date:</label>
+                            <input type="date" id="exam-date" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-time">Start Time:</label>
+                                <input type="time" id="start-time" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="end-time">End Time:</label>
+                                <input type="time" id="end-time" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-description">Description:</label>
+                            <textarea id="session-description" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Session
+                        </button>
+                    </form>
+                    
+                    <div class="sessions-list">
+                        <h4>Current Sessions</h4>
+                        <div id="sessions-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Allocation Tab -->
+            <div id="allocation-tab" class="tab-content">
+                <div class="card">
+                    <h3>Run Automatic Allocation</h3>
+                    
+                    <div class="form-group">
+                        <label for="session-select">Select Session:</label>
+                        <select id="session-select" required>
+                            <option value="">Choose a session...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mix-departments" checked>
+                            Mix departments to prevent adjacent students from same department
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rows-per-hall">Rows per hall:</label>
+                        <input type="number" id="rows-per-hall" value="10" min="1" max="20">
+                    </div>
+                    
+                    <button id="run-allocation" class="btn btn-success btn-large">
+                        <i class="fas fa-play"></i> Run Allocation
+                    </button>
+                    <div id="allocation-status"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Student Panel Section -->
+        <section id="student-section" class="content-section">
+            <h2><i class="fas fa-search"></i> Student Hall Allocation</h2>
+            <div class="card">
+                <h3>Find Your Exam Hall</h3>
+                <form id="student-search">
+                    <div class="form-group">
+                        <label for="roll-number">Roll Number:</label>
+                        <input type="text" id="roll-number" placeholder="Enter your roll number" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="session-select-student">Select Session:</label>
+                        <select id="session-select-student" required>
+                            <option value="">Choose a session...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </form>
+                <div id="student-result"></div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports-section" class="content-section">
+            <h2><i class="fas fa-file-alt"></i> Reports</h2>
+            
+            <div class="form-group">
+                <label for="report-session-select">Select Session:</label>
+                <select id="report-session-select">
+                    <option value="">All Sessions</option>
+                </select>
+            </div>
+            
+            <div class="report-controls">
+                <button class="btn btn-primary" onclick="generateHallReport()">
+                    <i class="fas fa-building"></i> Hall-wise Report
+                </button>
+                <button class="btn btn-primary" onclick="generateDepartmentReport()">
+                    <i class="fas fa-users"></i> Department-wise Report
+                </button>
+                <button class="btn btn-success" onclick="generateAttendanceSheet()">
+                    <i class="fas fa-clipboard-check"></i> Attendance Sheet
+                </button>
+                <button class="btn btn-info" onclick="generateHallTickets()">
+                    <i class="fas fa-ticket-alt"></i> Hall Tickets
+                </button>
+            </div>
+
+            <div class="export-controls">
+                <button class="btn btn-primary" onclick="exportToPDF()">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </button>
+                <button class="btn btn-success" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+                <div class="visual-export-option">
+                    <label>
+                        <input type="checkbox" id="visual-export-checkbox">
+                        <i class="fas fa-th"></i> Visual Seating Layout
+                    </label>
+                </div>
+            </div>
+
+            <div id="reports-container"></div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Exam Hall Allocation System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

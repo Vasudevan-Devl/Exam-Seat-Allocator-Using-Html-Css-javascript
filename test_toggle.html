@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Toggle</title>
+</head>
+<body>
+    <h2>Test Roll Entry Toggle</h2>
+    
+    <div>
+        <label>
+            <input type="radio" name="roll-entry-method" value="manual" checked> Manual Entry
+        </label>
+        <label>
+            <input type="radio" name="roll-entry-method" value="excel"> Excel Upload
+        </label>
+    </div>
+    
+    <div id="manual-roll-entry" style="display: block; background: lightblue; padding: 20px; margin: 10px;">
+        Manual Entry Section
+    </div>
+    
+    <div id="excel-roll-entry" style="display: none; background: lightgreen; padding: 20px; margin: 10px;">
+        Excel Upload Section
+    </div>
+    
+    <button onclick="testToggle()">Test Toggle to Excel</button>
+    
+    <script>
+        document.querySelectorAll('input[name="roll-entry-method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                console.log('Radio changed to:', this.value);
+                toggleRollEntryMethod(this.value);
+            });
+        });
+        
+        function toggleRollEntryMethod(method) {
+            console.log('Toggling to method:', method);
+            const manualEntry = document.getElementById('manual-roll-entry');
+            const excelEntry = document.getElementById('excel-roll-entry');
+            
+            console.log('Manual entry element:', manualEntry);
+            console.log('Excel entry element:', excelEntry);
+            
+            if (method === 'manual') {
+                manualEntry.style.display = 'block';
+                excelEntry.style.display = 'none';
+                console.log('Showing manual entry');
+            } else {
+                manualEntry.style.display = 'none';
+                excelEntry.style.display = 'block';
+                console.log('Showing excel entry');
+            }
+        }
+        
+        function testToggle() {
+            toggleRollEntryMethod('excel');
+        }
+    </script>
+</body>
+</html>
